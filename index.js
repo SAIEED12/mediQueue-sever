@@ -36,6 +36,13 @@ async function run() {
         res.send(result)
     })
 
+    //Available Cards Section
+        app.get('/available', async(req, res) =>{
+        const cursor = tutorsCollection.find().limit(6)
+        const result = await cursor.toArray()
+        res.send(result)
+    })
+
     //Single Data API
     app.get('/tutors/:tutorId', async(req, res) =>{
         const {tutorId} = req.params
