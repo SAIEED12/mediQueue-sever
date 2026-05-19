@@ -68,13 +68,28 @@ async function run() {
       const { search } = req.query;
       let cursor;
       if (search) {
-        cursor = tutorsCollection.find({ name: {$eq: search} });
+        cursor = tutorsCollection.find({
+          $or: [
+            {
+              name: {
+                $regex: search,
+                $options: "i",
+              },
+            },
+            {
+              subject: {
+                $regex: search,
+                $options: "i",
+              },
+            },
+          ],
+        });
       } else {
         cursor = tutorsCollection.find();
       }
 
       const result = await cursor.toArray();
-      console.log(result)
+      console.log(result);
       res.send(result);
     });
 
@@ -95,27 +110,39 @@ async function run() {
       res.send(result);
     });
 
+    //Booked Session API
+    app.get("/booked-sessions/:userId", verifyToken, async (req, res) => {
+      const { userId } = req.params;
+      const result = await bookingCollection.find({ userId: userId }).toArray();
+      res.send(result);
+    });
+
     //Booking API
-    app.patch('/bookings/:tutorId',verifyToken, async (req, res) => {
+    app.patch("/bookings/:tutorId", verifyToken, async (req, res) => {
       const { tutorId } = req.params;
       const bookingData = req.body;
-      const tutor = await tutorsCollection.findOne({_id: new ObjectId(tutorId)})
+      const tutor = await tutorsCollection.findOne({
+        _id: new ObjectId(tutorId),
+      });
 
-      if(!tutor){
-        res.status(404).json({message: "Tutor not found!"})
+      if (!tutor) {
+        res.status(404).json({ message: "Tutor not found!" });
       }
-      await tutorsCollection.updateOne({_id: new ObjectId(tutorId)}, {
-        $inc: {totalSlot: -1},
-        $set: {
-          lastBookingAt: new Date(),
+      await tutorsCollection.updateOne(
+        { _id: new ObjectId(tutorId) },
+        {
+          $inc: { totalSlot: -1 },
+          $set: {
+            lastBookingAt: new Date(),
+          },
         },
-      })
+      );
       const result = await bookingCollection.insertOne({
         ...bookingData,
-        enrolledAt: new Date()
-      })
-      res.send(result)
-    })
+        enrolledAt: new Date(),
+      });
+      res.send(result);
+    });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!",
     );
