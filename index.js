@@ -6,6 +6,7 @@ const cors = require("cors");
 dotenv.config();
 const app = express();
 app.use(cors());
+app.use(express.json());
 const port = process.env.PORT || 8000;
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const { createRemoteJWKSet, jwtVerify } = require("jose-cjs");
@@ -60,6 +61,7 @@ async function run() {
 
     const db = client.db("mediQueuedb");
     const tutorsCollection = db.collection("tutors");
+    const bookingCollection = db.collection("bookings");
 
     //All Data API
     app.get("/tutors", async (req, res) => {
@@ -93,6 +95,27 @@ async function run() {
       res.send(result);
     });
 
+    //Booking API
+    app.patch('/bookings/:tutorId',verifyToken, async (req, res) => {
+      const { tutorId } = req.params;
+      const bookingData = req.body;
+      const tutor = await tutorsCollection.findOne({_id: new ObjectId(tutorId)})
+
+      if(!tutor){
+        res.status(404).json({message: "Tutor not found!"})
+      }
+      await tutorsCollection.updateOne({_id: new ObjectId(tutorId)}, {
+        $inc: {totalSlot: -1},
+        $set: {
+          lastBookingAt: new Date(),
+        },
+      })
+      const result = await bookingCollection.insertOne({
+        ...bookingData,
+        enrolledAt: new Date()
+      })
+      res.send(result)
+    })
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!",
     );
