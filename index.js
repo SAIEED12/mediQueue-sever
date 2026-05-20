@@ -143,6 +143,31 @@ async function run() {
       });
       res.send(result);
     });
+
+    //Cncel Booking API
+    app.patch("/bookings/:bookingId", verifyToken, async (req, res) => {
+      const { bookingId } = req.params;
+      const booking = await bookingCollection.findOne({
+        _id: new ObjectId(bookingId),
+      });
+      if (!booking) {
+        return res.status(404).json({ message: "Booking not found!" });
+      }
+      await tutorsCollection.updateOne(
+        { _id: new ObjectId(booking.tutorId) },
+        {
+          $inc: { totalSlot: 1 },
+        },
+      );
+      const result = await bookingCollection.updateOne({ _id: new ObjectId(bookingId) },
+    {
+      $set:{
+        status: "cancelled",
+      }
+    });
+      res.json(result);
+    });
+
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!",
     );
