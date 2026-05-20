@@ -144,8 +144,8 @@ async function run() {
       res.send(result);
     });
 
-    //Cncel Booking API
-    app.patch("/bookings/:bookingId", verifyToken, async (req, res) => {
+    //Cancel Booking API
+    app.patch("/bookings/:bookingId/cancel", verifyToken, async (req, res) => {
       const { bookingId } = req.params;
       const booking = await bookingCollection.findOne({
         _id: new ObjectId(bookingId),
