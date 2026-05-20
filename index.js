@@ -63,6 +63,13 @@ async function run() {
     const tutorsCollection = db.collection("tutors");
     const bookingCollection = db.collection("bookings");
 
+    //Create Tutor API
+    app.post("/tutors", verifyToken, async(req, res) => {
+      const tutorData = req.body;
+      const result = await tutorsCollection.insertOne(tutorData);
+      res.json(result);
+    });
+
     //All Data API
     app.get("/tutors", async (req, res) => {
       const { search } = req.query;
@@ -93,7 +100,8 @@ async function run() {
       res.send(result);
     });
 
-    //Available Cards Section
+
+    //Available Cards API
     app.get("/available", async (req, res) => {
       const cursor = tutorsCollection.find().limit(6);
       const result = await cursor.toArray();
@@ -167,6 +175,58 @@ async function run() {
     });
       res.json(result);
     });
+
+
+    //Created Tutors by users API
+    app.get("/my-tutors", verifyToken, async (req, res) => {
+        const email = req.user?.email; 
+        const result = await tutorsCollection.find({ creatorEmail: email }).toArray();
+        res.send(result);
+    });
+
+    //Update Tutor API
+    app.put("/tutors/:tutorId", verifyToken, async (req, res) => {
+        const { tutorId } = req.params;
+        const updatedData = req.body;
+        
+        delete updatedData._id;
+
+        if (updatedData.hourlyFee) updatedData.hourlyFee = parseFloat(updatedData.hourlyFee);
+        if (updatedData.totalSlot) updatedData.totalSlot = parseInt(updatedData.totalSlot);
+        if (updatedData.experience) updatedData.experience = parseInt(updatedData.experience);
+
+        const result = await tutorsCollection.updateOne(
+          { _id: new ObjectId(tutorId) }, 
+          { $set: updatedData }
+        );
+        res.json(result);
+    });
+
+    //Delete Tutor API
+    app.delete("/tutors/:tutorId", verifyToken, async (req, res) => {
+      try {
+        const { tutorId } = req.params;
+        const userEmail = req.user?.email; 
+        const result = await tutorsCollection.deleteOne({
+          _id: new ObjectId(tutorId),
+          creatorEmail: userEmail 
+        });
+
+        if (result.deletedCount === 0) {
+          return res.status(404).json({ 
+            success: false, 
+            message: "Tutor not found or you are not authorized to delete this profile." 
+          });
+        }
+
+        res.json({ success: true, message: "Tutor profile deleted successfully", result });
+      } catch (error) {
+        console.error("Error deleting tutor:", error);
+        res.status(500).json({ message: "Failed to delete tutor profile" });
+      }
+    });
+
+    
 
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!",
