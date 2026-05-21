@@ -55,7 +55,7 @@ const verifyToken = async (req, res, next) => {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+    // await client.connect();
     // Send a ping to confirm a successful connection
     // await client.db("admin").command({ ping: 1 });
 
@@ -71,35 +71,38 @@ async function run() {
     });
 
     //All Data API
-    app.get("/tutors", async (req, res) => {
-      const { search } = req.query;
-      let cursor;
-      if (search) {
-        cursor = tutorsCollection.find({
-          $or: [
-            {
-              name: {
-                $regex: search,
-                $options: "i",
-              },
-            },
-            {
-              subject: {
-                $regex: search,
-                $options: "i",
-              },
-            },
-          ],
-        });
-      } else {
-        cursor = tutorsCollection.find();
+app.get("/tutors", async (req, res) => {
+      try {
+        const { search, startDate, endDate } = req.query;
+
+        let query = {};
+        if (search) {
+          query.$or = [
+            { name: { $regex: search, $options: "i" } },
+            { subject: { $regex: search, $options: "i" } }
+          ];
+        }
+
+        if (startDate || endDate) {
+          query.sessionStartDate = {};
+          
+          if (startDate) {
+            query.sessionStartDate.$gte = startDate; 
+          }
+          if (endDate) {
+            query.sessionStartDate.$lte = endDate;
+          }
+        }
+
+        const cursor = tutorsCollection.find(query);
+        const result = await cursor.toArray();
+        
+        res.send(result);
+      } catch (error) {
+        console.error("Error fetching filtered tutors:", error);
+        res.status(500).json({ message: "Internal Server Error" });
       }
-
-      const result = await cursor.toArray();
-      console.log(result);
-      res.send(result);
     });
-
 
     //Available Cards API
     app.get("/available", async (req, res) => {
@@ -226,7 +229,7 @@ async function run() {
       }
     });
 
-    
+
 
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!",
